@@ -7,6 +7,9 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
 @Service
 public class PiSearchService implements PiSearch {
@@ -103,7 +106,7 @@ public class PiSearchService implements PiSearch {
 
     private String preprocessPageText(String pageText) {
         // Remove all non-digit characters (handles various PDF formatting)
-        String processed = pageText.replaceAll("[^0-9]", "");
+        String processed = pageText.replaceAll("[^0-9.]", "");
 
         return processed;
     }
@@ -144,5 +147,38 @@ public class PiSearchService implements PiSearch {
             }
         }
         return lps;
+    }
+
+    public String generatePi(int digits) {
+        MathContext mc = new MathContext(digits + 5, RoundingMode.HALF_UP); // Extra precision
+        BigDecimal C = new BigDecimal("426880").multiply(sqrt(new BigDecimal("10005"), mc));
+        BigDecimal K = BigDecimal.ZERO;
+        BigDecimal M = BigDecimal.ONE;
+        BigDecimal X = BigDecimal.ONE;
+        BigDecimal L = new BigDecimal("13591409");
+        BigDecimal S = L;
+
+        for (int k = 1; k <= digits / 14; k++) {
+            K = new BigDecimal(6 * k - 5)
+                    .multiply(new BigDecimal(2 * k - 1))
+                    .multiply(new BigDecimal(6 * k - 1));
+            M = M.multiply(K).divide(new BigDecimal(k * k * k), mc);
+            X = X.multiply(new BigDecimal("-262537412640768000"), mc);
+            L = L.add(new BigDecimal("545140134"));
+            S = S.add(M.multiply(L).divide(X, mc));
+        }
+
+        return C.divide(S, mc).setScale(digits, RoundingMode.DOWN).toString();
+
+    }
+
+    private static BigDecimal sqrt(BigDecimal value, MathContext mc) {
+        BigDecimal x0 = BigDecimal.ZERO;
+        BigDecimal x1 = value;
+        while (!x0.equals(x1)) {
+            x0 = x1;
+            x1 = value.divide(x0, mc).add(x0).divide(BigDecimal.valueOf(2), mc);
+        }
+        return x1;
     }
 }
